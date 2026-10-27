@@ -4,10 +4,20 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
-members = ["base_path", "cache", "drive","leoexplorer-gui", "os", "shared", "system"]
+members = [
+    "base_path",
+    "cache",
+    "drive",
+    "leoexplorer-gui",
+    "os",
+    "shared",
+    "system",
+]
 
 [dependencies]
 leoexplorer-gui = { path = "leoexplorer-gui" }
+cache = { path = "cache" }
+shared = { path = "shared" }
 iced = "0.13.0"
 env_logger = "0.11"
 

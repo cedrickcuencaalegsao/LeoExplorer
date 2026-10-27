@@ -19,12 +19,18 @@ pub fn reset_tree_build_progress(total_expected: u64) {
 
 /// Log each `FileEntry` node materialized during cache tree construction (terminal progress).
 pub fn log_cache_tree_insert(path_str: &str, is_dir: bool) {
+    // Skip all the work (atomics + formatting) unless trace logging is on.
+    if !log::log_enabled!(log::Level::Trace) {
+        return;
+    }
+
     let i = TREE_INSERT_SEQ.fetch_add(1, Ordering::Relaxed) + 1;
     let total = TREE_INSERT_TOTAL.load(Ordering::Relaxed);
     let kind = if is_dir { "DIR " } else { "FILE" };
+
     if total > 0 {
-        println!("[cache-tree] {i:>7}/{total:<7} {kind} {path_str}");
+        log::trace!(target: "cache-tree", "{i:>7}/{total:<7} {kind} {path_str}");
     } else {
-        println!("[cache-tree] {i:>7} {kind} {path_str}");
+        log::trace!(target: "cache-tree", "{i:>7} {kind} {path_str}");
     }
 }
