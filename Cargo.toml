@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
-members = ["base_path","leoexplorer-gui", "os", "shared", "system"]
+members = ["base_path", "cache", "drive","leoexplorer-gui", "os", "shared", "system"]
 
 [dependencies]
 leoexplorer-gui = { path = "leoexplorer-gui" }
