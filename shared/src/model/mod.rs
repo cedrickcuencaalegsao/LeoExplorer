@@ -1,9 +1,12 @@
+mod alldirectories;
 mod cache;
 mod cachebuildprogress;
 mod cachedata;
 mod cachesearchprogress;
 mod clipboard;
 mod deepsearchsettings;
+mod directorystats;
+mod directorystatstraversalstate;
 mod drive;
 mod fileentry;
 mod filemonitorignorelist;
@@ -17,12 +20,15 @@ mod settings;
 mod systemsettings;
 mod trashentry;
 
+pub use alldirectories::*;
 pub use cache::*;
 pub use cachebuildprogress::*;
 pub use cachedata::*;
 pub use cachesearchprogress::*;
 pub use clipboard::*;
 pub use deepsearchsettings::*;
+pub use directorystats::*;
+pub use directorystatstraversalstate::*;
 pub use drive::*;
 pub use fileentry::*;
 pub use filemonitorignorelist::*;

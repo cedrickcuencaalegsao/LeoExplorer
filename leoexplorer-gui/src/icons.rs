@@ -15,6 +15,10 @@ impl Icon {
         Self { name, bytes, size }
     }
 
+    pub fn size(&self) -> f32 {
+        self.size
+    }
+
     pub fn render<'a>(self, hidden: bool, active: bool) -> Svg<'a> {
         let custom = config::icon_color(self.name);
 
@@ -28,7 +32,14 @@ impl Icon {
                 } else {
                     custom.unwrap_or(palette.text)
                 };
-                let color = if hidden { Color { a: base.a * 0.5, ..base } } else { base };
+                let color = if hidden {
+                    Color {
+                        a: base.a * 0.5,
+                        ..base
+                    }
+                } else {
+                    base
+                };
                 svg::Style { color: Some(color) }
             })
     }
@@ -43,7 +54,11 @@ impl<'a, Message: 'a> From<Icon> for Element<'a, Message> {
 macro_rules! icon_fn {
     ($name:ident, $file:literal) => {
         pub fn $name(size: f32) -> Icon {
-            Icon::new($file, include_bytes!(concat!("../../assets/icons/", $file)), size)
+            Icon::new(
+                $file,
+                include_bytes!(concat!("../../assets/icons/", $file)),
+                size,
+            )
         }
     };
 }
@@ -63,5 +78,7 @@ icon_fn!(usb, "usb.svg");
 icon_fn!(eject, "eject.svg");
 icon_fn!(moon, "moon.svg");
 icon_fn!(sun, "sun.svg");
-icon_fn!(lock, "lock.svg");icon_fn!(x, "x.svg");
+icon_fn!(lock, "lock.svg");
+icon_fn!(x, "x.svg");
 icon_fn!(plus, "plus.svg");
+icon_fn!(cloud, "cloud.svg");

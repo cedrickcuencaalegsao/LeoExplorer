@@ -8,3 +8,6 @@ iced = { version = "0.13", features = ["svg", "tokio", "lazy"] }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 dirs = "5"
+log = "0.4"
+system = { path = "../system" }
+shared = { path = "../shared" }

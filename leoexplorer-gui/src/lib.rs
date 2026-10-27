@@ -7,8 +7,12 @@ pub mod spmenu;
 pub mod tab;
 pub mod tabbar;
 
+use std::sync::Arc;
+
 use iced::widget::{column, container, row, text};
-use iced::{window, Element, Length, Size, Task, Theme};
+use iced::{Element, Length, Size, Task, Theme, window};
+use log::debug;
+use shared::AllDirectories;
 
 use tab::Tab;
 use tabbar::TabBar;
@@ -16,13 +20,15 @@ use tabbar::TabBar;
 struct App {
     tabs: Vec<Tab>,
     active: usize,
+    dirs: Arc<AllDirectories>,
 }
 
-impl Default for App {
-    fn default() -> Self {
+impl App {
+    fn new(dirs: Arc<AllDirectories>) -> Self {
         Self {
-            tabs: vec![Tab::new(false)],
+            tabs: vec![Tab::new(false, &dirs)],
             active: 0,
+            dirs,
         }
     }
 }
@@ -56,7 +62,7 @@ fn update(app: &mut App, msg: Message) -> Task<Message> {
         }
         Message::NewTab => {
             let dark = app.tabs[app.active].sidebar.dark;
-            app.tabs.push(Tab::new(dark));
+            app.tabs.push(Tab::new(dark, &app.dirs));
             app.active = app.tabs.len() - 1;
         }
         Message::CloseTab(i) => {
@@ -103,6 +109,10 @@ fn view(app: &App) -> Element<'_, Message> {
 
 pub fn run() -> iced::Result {
     config::init();
+
+    let dirs = Arc::new(system::get_all_dirs_and_drives());
+    debug!("system dirs: {dirs:#?}");
+
     iced::application("LeoExplorer", update, view)
         .theme(|app| {
             if app.tabs[app.active].sidebar.dark {
@@ -116,5 +126,5 @@ pub fn run() -> iced::Result {
             min_size: Some(Size::new(600.0, 400.0)),
             ..Default::default()
         })
-        .run()
+        .run_with(move || (App::new(dirs), Task::none()))
 }
