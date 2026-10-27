@@ -1,0 +1,10 @@
+[package]
+name = "LeoExplorer"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+members = ["leoexplorer-gui"]
+
+[dependencies]
+leoexplorer-gui = { path = "leoexplorer-gui" }
