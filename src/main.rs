@@ -1,3 +1,3 @@
-fn main(){
-    leoexplorer_gui::run().unwrap();
+fn main() -> iced::Result {
+    leoexplorer_gui::run()
 }

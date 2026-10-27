@@ -8,3 +8,4 @@ members = ["leoexplorer-gui"]
 
 [dependencies]
 leoexplorer-gui = { path = "leoexplorer-gui" }
+iced = "0.13.0"
