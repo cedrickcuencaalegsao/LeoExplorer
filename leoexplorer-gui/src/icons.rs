@@ -63,4 +63,5 @@ icon_fn!(usb, "usb.svg");
 icon_fn!(eject, "eject.svg");
 icon_fn!(moon, "moon.svg");
 icon_fn!(sun, "sun.svg");
-icon_fn!(lock, "lock.svg");
+icon_fn!(lock, "lock.svg");icon_fn!(x, "x.svg");
+icon_fn!(plus, "plus.svg");

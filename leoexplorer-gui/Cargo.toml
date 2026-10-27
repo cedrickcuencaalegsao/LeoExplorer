@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-iced = { version = "0.13", features = ["svg", "tokio"] }
+iced = { version = "0.13", features = ["svg", "tokio", "lazy"] }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 dirs = "5"
