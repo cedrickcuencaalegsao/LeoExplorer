@@ -18,8 +18,10 @@ members = [
 leoexplorer-gui = { path = "leoexplorer-gui" }
 cache = { path = "cache" }
 shared = { path = "shared" }
+system = { path = "system" }
 iced = "0.13.0"
 env_logger = "0.11"
+log = "0.4"
 
 [profile.dev]
 opt-level = 1

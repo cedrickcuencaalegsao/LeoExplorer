@@ -10,7 +10,9 @@ dependencies = [
  "env_logger",
  "iced",
  "leoexplorer-gui",
+ "log",
  "shared",
+ "system",
 ]
 
 [[package]]

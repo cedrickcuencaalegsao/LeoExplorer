@@ -9,8 +9,15 @@ fn main() -> iced::Result {
     let report: Reporter = Arc::new(move |event| {
         let _ = _tx.send(event);
     });
-
-    cache::init(report);
+    match system::init_settings()  {
+        Ok(()) =>{
+            log::info!("Settings OK. Starting cache.");
+            cache::init(report);
+        }
+        Err(e) => {
+            log::error!("Settings init failed, cache not started: {e}")
+        }
+    }
 
     // hand `rx` to the GUI, e.g. via a static/OnceLock or a custom run function
     leoexplorer_gui::run()
