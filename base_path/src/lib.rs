@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 use shared::CACHE_FILE_NAME;
 use shared::CACHE_TEMP_FILE_NAME;
+use shared::LEO_EXPLORER;
+use shared::SETTINGS_FILE;
+use shared::SETTINGS_FOLDER;
 
 pub fn base_path() -> PathBuf {
     let base_path = if let Ok(home) = std::env::var("USERPROFILE") {
@@ -13,7 +16,7 @@ pub fn base_path() -> PathBuf {
         PathBuf::from(".")
     };
 
-    base_path.join(".leo_explorer")
+    base_path.join(LEO_EXPLORER)
 }
 
 pub fn cache_path() -> PathBuf {
@@ -21,7 +24,7 @@ pub fn cache_path() -> PathBuf {
 }
 
 pub fn settings_path() -> PathBuf {
-    base_path().join("settings").join("settings.json")
+    base_path().join(SETTINGS_FOLDER).join(SETTINGS_FILE)
 }
 
 pub fn find_cache() -> bool {
@@ -30,7 +33,7 @@ pub fn find_cache() -> bool {
         return false;
     }
 
-    base_path.join("leocache.zst").exists()
+    base_path.join(CACHE_FILE_NAME).exists()
 }
 
 pub fn get_user_home() -> Option<PathBuf> {

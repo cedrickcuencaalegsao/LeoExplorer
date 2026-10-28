@@ -11,6 +11,8 @@ dirs = "5"
 log = "0.4"
 system = { path = "../system" }
 shared = { path = "../shared" }
+bootstrap = { path = "../bootstrap"}
+leoexplorer_setup= { path = "../leoexplorer_setup"}
 
 
 [target.'cfg(target_os = "macos")'.dependencies]

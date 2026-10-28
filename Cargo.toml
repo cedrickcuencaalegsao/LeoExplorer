@@ -6,9 +6,11 @@ edition = "2024"
 [workspace]
 members = [
     "base_path",
+    "bootstrap",
     "cache",
     "drive",
     "leoexplorer-gui",
+    "leoexplorer_setup",
     "os",
     "shared",
     "system",
@@ -19,6 +21,7 @@ leoexplorer-gui = { path = "leoexplorer-gui" }
 cache = { path = "cache" }
 shared = { path = "shared" }
 system = { path = "system" }
+bootstrap = { path = "bootstrap" }
 iced = "0.13.0"
 env_logger = "0.11"
 log = "0.4"

@@ -6,6 +6,7 @@ version = 4
 name = "LeoExplorer"
 version = "0.1.0"
 dependencies = [
+ "bootstrap",
  "cache",
  "env_logger",
  "iced",
@@ -446,6 +447,18 @@ dependencies = [
  "futures-io",
  "futures-lite",
  "piper",
+]
+
+[[package]]
+name = "bootstrap"
+version = "0.1.0"
+dependencies = [
+ "base_path",
+ "cache",
+ "futures",
+ "log",
+ "shared",
+ "system",
 ]
 
 [[package]]
@@ -2101,8 +2114,10 @@ checksum = "7a79a3332a6609480d7d0c9eab957bca6b455b91bb84e66d19f5ff66294b85b8"
 name = "leoexplorer-gui"
 version = "0.1.0"
 dependencies = [
+ "bootstrap",
  "dirs 5.0.1",
  "iced",
+ "leoexplorer_setup",
  "log",
  "objc2 0.5.3",
  "objc2-app-kit",
@@ -2111,6 +2126,14 @@ dependencies = [
  "shared",
  "system",
  "toml",
+]
+
+[[package]]
+name = "leoexplorer_setup"
+version = "0.1.0"
+dependencies = [
+ "bootstrap",
+ "iced",
 ]
 
 [[package]]

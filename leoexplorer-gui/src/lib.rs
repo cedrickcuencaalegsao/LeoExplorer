@@ -9,13 +9,17 @@ pub mod tabbar;
 
 use std::sync::Arc;
 
+use bootstrap::{BootEvent, BootReceiver};
 use iced::widget::{column, container, row, text};
-use iced::{Element, Length, Size, Task, Theme, window};
+use iced::{Element, Length, Size, Subscription, Task, Theme, window};
+use leoexplorer_setup::{self as setup, SetupState};
 use log::debug;
 use shared::AllDirectories;
 
 use tab::Tab;
 use tabbar::TabBar;
+
+// ------------------------------------------------------------------ main screen (unchanged logic)
 
 struct App {
     tabs: Vec<Tab>,
@@ -41,7 +45,7 @@ enum Message {
     NewTab,
 }
 
-fn update(app: &mut App, msg: Message) -> Task<Message> {
+fn update_main(app: &mut App, msg: Message) -> Task<Message> {
     match msg {
         Message::Sidebar(i, m) => {
             let toggled = matches!(m, sidebar::Message::ToggleTheme);
@@ -82,7 +86,7 @@ fn update(app: &mut App, msg: Message) -> Task<Message> {
     Task::none()
 }
 
-fn view(app: &App) -> Element<'_, Message> {
+fn view_main(app: &App) -> Element<'_, Message> {
     let mut bar = TabBar::new(app.active).on_new(|| Message::NewTab);
 
     for (i, tab) in app.tabs.iter().enumerate() {
@@ -107,56 +111,112 @@ fn view(app: &App) -> Element<'_, Message> {
     column![bar, body].into()
 }
 
-pub fn run() -> iced::Result {
-    #[cfg(target_os = "macos")]
-    set_dock_icon(include_bytes!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../assets/app-icon.png"
-    )));
+// ------------------------------------------------------------------ root: setup screen -> main screen
+//
+// One iced application switches screens, because winit can't create a second
+// event loop in the same process on macOS (so two `application().run()` calls
+// in a row is not an option).
 
-    let icon = window::icon::from_file_data(
-        include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/app-icon.png")),
-        None,
-    )
-    .ok();
+enum Root {
+    Setup(SetupState),
+    Main(App),
+}
+
+#[derive(Debug, Clone)]
+enum RootMessage {
+    Boot(BootEvent),
+    Setup(setup::Message),
+    Main(Message),
+}
+
+/// Builds the main screen. Runs only after settings/cache are ready.
+fn enter_main() -> Root {
     config::init();
 
     let dirs = Arc::new(system::get_all_dirs_and_drives());
     debug!("system dirs: {dirs:#?}");
 
-    iced::application("LeoExplorer", update, view)
-        .theme(|app| {
+    Root::Main(App::new(dirs))
+}
+
+fn update(root: &mut Root, msg: RootMessage) -> Task<RootMessage> {
+    match msg {
+        RootMessage::Boot(BootEvent::Ready) | RootMessage::Setup(setup::Message::Continue) => {
+            if matches!(root, Root::Setup(_)) {
+                *root = enter_main();
+            }
+        }
+        RootMessage::Boot(event) => {
+            if let Root::Setup(state) = root {
+                state.apply(event);
+            }
+        }
+        RootMessage::Setup(m) => {
+            if let Root::Setup(state) = root {
+                state.update(m);
+            }
+        }
+        RootMessage::Main(m) => {
+            if let Root::Main(app) = root {
+                return update_main(app, m).map(RootMessage::Main);
+            }
+        }
+    }
+    Task::none()
+}
+
+fn view(root: &Root) -> Element<'_, RootMessage> {
+    match root {
+        Root::Setup(state) => state.view().map(RootMessage::Setup),
+        Root::Main(app) => view_main(app).map(RootMessage::Main),
+    }
+}
+
+fn theme(root: &Root) -> Theme {
+    match root {
+        Root::Setup(_) => Theme::Dark,
+        Root::Main(app) => {
             if app.tabs[app.active].sidebar.dark {
                 Theme::Dark
             } else {
                 Theme::Light
             }
-        })
+        }
+    }
+}
+
+fn subscription(root: &Root) -> Subscription<RootMessage> {
+    match root {
+        Root::Setup(_) => {
+            window::frames().map(|at| RootMessage::Setup(setup::Message::Frame(at)))
+        }
+        Root::Main(_) => Subscription::none(),
+    }
+}
+
+/// `boot = Some(rx)` starts on the setup screen and follows `rx` until `Ready`.
+/// `boot = None` goes straight to the main screen.
+pub fn run(boot: Option<BootReceiver>) -> iced::Result {
+    let icon = window::icon::from_file_data(
+        include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/app-icon.png")),
+        None,
+    )
+    .ok();
+
+    iced::application("LeoExplorer", update, view)
+        .theme(theme)
+        .subscription(subscription)
         .window(window::Settings {
             size: Size::new(1100.0, 800.0),
             min_size: Some(Size::new(600.0, 400.0)),
             icon,
             ..Default::default()
         })
-        .run_with(move || (App::new(dirs), Task::none()))
-}
-
-
-#[cfg(target_os = "macos")]
-fn set_dock_icon(png: &[u8]) {
-    use objc2::ClassType;
-    use objc2_app_kit::{NSApplication, NSImage};
-    use objc2_foundation::{MainThreadMarker, NSData};
-
-    let Some(mtm) = MainThreadMarker::new() else {
-        return;
-    };
-
-    let data = NSData::with_bytes(png);
-
-    unsafe {
-        if let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) {
-            NSApplication::sharedApplication(mtm).setApplicationIconImage(Some(&image));
-        }
-    }
+        .run_with(move || match boot {
+            Some(rx) => (
+                Root::Setup(SetupState::new()),
+                Task::run(rx, RootMessage::Boot),
+            ),
+            None => (enter_main(), Task::none()),
+        })
 }

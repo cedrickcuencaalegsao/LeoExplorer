@@ -1,24 +1,31 @@
-use std::sync::{Arc, mpsc};
+use std::sync::Arc;
+
 use shared::{CacheEvent, Reporter};
 
 fn main() -> iced::Result {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info,cache-tree=trace")).init();
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("info,cache-tree=trace"),
+    )
+    .init();
 
-    let (_tx, _rx) = mpsc::channel::<CacheEvent>();
+    // First run (no cache file yet): the GUI starts on the setup screen and
+    // the settings + cache are built on a background thread.
+    if bootstrap::needs_setup() {
+        log::info!("No cache found, starting first-run setup.");
+        return leoexplorer_gui::run(Some(bootstrap::spawn()));
+    } 
 
-    let report: Reporter = Arc::new(move |event| {
-        let _ = _tx.send(event);
-    });
-    match system::init_settings()  {
-        Ok(()) =>{
+    // Normal run: same behaviour as before, straight into the main window.
+    match system::init_settings() {
+        Ok(()) => {
             log::info!("Settings OK. Starting cache.");
+            let report: Reporter = Arc::new(|event: CacheEvent| {
+                log::trace!(target: "cache-tree", "{event:?}");
+            });
             cache::init(report);
         }
-        Err(e) => {
-            log::error!("Settings init failed, cache not started: {e}")
-        }
+        Err(e) => log::error!("Settings init failed, cache not started: {e}"),
     }
 
-    // hand `rx` to the GUI, e.g. via a static/OnceLock or a custom run function
-    leoexplorer_gui::run()
+    leoexplorer_gui::run(None)
 }
