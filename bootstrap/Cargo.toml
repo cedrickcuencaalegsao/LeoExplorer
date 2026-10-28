@@ -1,0 +1,12 @@
+[package]
+name = "bootstrap"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+shared = { path = "../shared" }
+system = { path = "../system" }
+cache = { path = "../cache" }
+base_path = { path = "../base_path" }
+futures = "0.3"
+log = "0.4"

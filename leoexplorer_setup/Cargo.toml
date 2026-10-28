@@ -1,0 +1,8 @@
+[package]
+name = "leoexplorer_setup"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bootstrap = { path = "../bootstrap" }
+iced = { version = "0.13", features = ["image"] }
