@@ -36,7 +36,7 @@ If you encounter any issues or need assistance, please contact our support team 
 
 ## License
 
-LeoExplorer is open-source software licensed under the [MIT License](https://opensource.org/licenses/MIT).
+LeoExplorer is open-source software licensed under the [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
 ---
 LeoExplorer is brought to you by [LeoExplorer Team](https://leoexplorer.com/about).
