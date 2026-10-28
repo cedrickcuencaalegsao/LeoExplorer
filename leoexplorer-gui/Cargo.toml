@@ -4,10 +4,16 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-iced = { version = "0.13", features = ["svg", "tokio", "lazy"] }
+iced = { version = "0.13", features = ["svg", "tokio", "lazy", "image"] }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 dirs = "5"
 log = "0.4"
 system = { path = "../system" }
 shared = { path = "../shared" }
+
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.5"
+objc2-foundation = { version = "0.2", features = ["NSData"] }
+objc2-app-kit = { version = "0.2", features = ["NSApplication", "NSImage", "NSResponder"] }

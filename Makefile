@@ -19,7 +19,7 @@ BIN_NAME         ?= $(APP_NAME)
 CARGO_ARGS       ?=
 
 # 1024x1024 PNG used to generate the .icns (optional)
-ICON_PNG         ?= assets/AppIcon.png
+ICON_PNG         ?= assets/app-icon.png
 
 # "-" = ad-hoc signing. For distribution use e.g.
 # SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)"

@@ -108,6 +108,17 @@ fn view(app: &App) -> Element<'_, Message> {
 }
 
 pub fn run() -> iced::Result {
+    #[cfg(target_os = "macos")]
+    set_dock_icon(include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../assets/app-icon.png"
+    )));
+
+    let icon = window::icon::from_file_data(
+        include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/app-icon.png")),
+        None,
+    )
+    .ok();
     config::init();
 
     let dirs = Arc::new(system::get_all_dirs_and_drives());
@@ -124,7 +135,28 @@ pub fn run() -> iced::Result {
         .window(window::Settings {
             size: Size::new(1100.0, 800.0),
             min_size: Some(Size::new(600.0, 400.0)),
+            icon,
             ..Default::default()
         })
         .run_with(move || (App::new(dirs), Task::none()))
+}
+
+
+#[cfg(target_os = "macos")]
+fn set_dock_icon(png: &[u8]) {
+    use objc2::ClassType;
+    use objc2_app_kit::{NSApplication, NSImage};
+    use objc2_foundation::{MainThreadMarker, NSData};
+
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
+
+    let data = NSData::with_bytes(png);
+
+    unsafe {
+        if let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) {
+            NSApplication::sharedApplication(mtm).setApplicationIconImage(Some(&image));
+        }
+    }
 }
