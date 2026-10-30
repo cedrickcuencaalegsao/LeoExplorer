@@ -1,13 +1,18 @@
 use std::path::{Component, Path, PathBuf};
+use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-use crate::filelist::FileListView;
 use iced::widget::text::Wrapping;
-use iced::widget::{Column, Row, button, column, container, row, scrollable, text, tooltip};
-use iced::{Alignment, Element, Length};
+use iced::widget::{
+    Column, Row, Space, button, column, container, mouse_area, row, scrollable, stack, text,
+    tooltip,
+};
+use iced::{Alignment, Element, Length, Point};
 use shared::{AllDirectories, Entry, FileList, ViewMode};
 
+use crate::filelist::FileListView;
 use crate::icons;
+use crate::item_menu::{ItemAction, ItemMenu, MenuCallback, menu_content};
 use crate::sidebar::{self, Sidebar};
 
 const DOUBLE_CLICK: Duration = Duration::from_millis(400);
@@ -29,6 +34,14 @@ pub enum Message {
     ToggleShowHidden,
     /// Search box text changed: filter the current folder by name.
     Search(String),
+    /// An item was right-clicked: open its popup menu.
+    OpenMenu(usize),
+    /// An action was chosen in an item's popup menu.
+    MenuAction(usize, ItemAction),
+    /// The popup menu was dismissed (click outside it).
+    CloseMenu,
+    /// The mouse moved inside the main pane (position relative to the pane).
+    CursorMoved(Point),
 }
 
 /// Dropdown shown under the breadcrumb bar.
@@ -52,6 +65,12 @@ pub struct Tab {
     view_mode: ViewMode,
     crumb_menu: Option<CrumbMenu>,
     show_hidden: bool,
+    /// Index (into `entries`) of the item whose popup menu is open.
+    menu_open: Option<usize>,
+    /// Last known mouse position inside the main pane.
+    cursor: Point,
+    /// Where the open popup menu is drawn (cursor position at right-click).
+    menu_pos: Point,
 }
 
 fn filter_hidden(mut entries: Vec<Entry>, show_hidden: bool) -> Vec<Entry> {
@@ -120,6 +139,9 @@ impl Tab {
             view_mode: ViewMode::default(),
             crumb_menu: None,
             show_hidden: false,
+            menu_open: None,
+            cursor: Point::ORIGIN,
+            menu_pos: Point::ORIGIN,
         };
 
         if let Some(first) = tab.sidebar.section_path(0) {
@@ -154,6 +176,8 @@ impl Tab {
 
         self.list_selected = None;
         self.last_click = None;
+        // Indices changed, so any open item menu would point at the wrong item.
+        self.menu_open = None;
     }
 
     fn navigate(&mut self, path: PathBuf) {
@@ -161,6 +185,7 @@ impl Tab {
         self.last_click = None;
         self.list_selected = None;
         self.crumb_menu = None;
+        self.menu_open = None;
         self.search.clear();
 
         let show = self.show_hidden;
@@ -209,6 +234,68 @@ impl Tab {
         self.apply_search();
     }
 
+    /// Runs the action chosen in an item's popup menu.
+    fn run_menu_action(&mut self, index: usize, action: ItemAction) {
+        let Some(dir) = self.current_dir.clone() else {
+            return;
+        };
+        let Some(entry) = self.entries.get(index) else {
+            return;
+        };
+
+        let path = dir.join(&entry.name);
+        let is_dir = entry.is_dir;
+
+        match action {
+            ItemAction::Open => {
+                if is_dir {
+                    self.navigate(path);
+                } else {
+                    // TODO: open the file with the system default app
+                    // (e.g. with the `open` crate: `open::that(&path)`).
+                    self.status = Some(format!("Open is not wired up yet: {}", path.display()));
+                }
+            }
+            ItemAction::Rename => {
+                // TODO: start an inline rename / show a rename dialog.
+                self.status = Some("Rename is not implemented yet".to_string());
+            }
+            ItemAction::Copy => {
+                // TODO: put `path` on the clipboard (iced::clipboard::write
+                // needs a Task, so this has to move to a Task-returning update).
+                self.status = Some("Copy is not implemented yet".to_string());
+            }
+            ItemAction::Delete => {
+                // WARNING: permanent delete, no confirmation and no trash.
+                let result = if is_dir {
+                    std::fs::remove_dir_all(&path)
+                } else {
+                    std::fs::remove_file(&path)
+                };
+
+                match result {
+                    Ok(()) => {
+                        self.refresh();
+                    }
+                    Err(err) => {
+                        self.status = Some(format!("Cannot delete {}: {err}", path.display()));
+                    }
+                }
+            }
+            ItemAction::Properties => {
+                self.status = Some(match std::fs::metadata(&path) {
+                    Ok(meta) => format!(
+                        "{} - {} - {} bytes",
+                        path.display(),
+                        if is_dir { "folder" } else { "file" },
+                        meta.len()
+                    ),
+                    Err(err) => format!("Cannot read {}: {err}", path.display()),
+                });
+            }
+        }
+    }
+
     pub fn update(&mut self, message: Message) {
         match message {
             Message::Sidebar(m) => {
@@ -228,6 +315,8 @@ impl Tab {
             }
             Message::ListClicked(index) => {
                 self.crumb_menu = None;
+                // A left click anywhere on an item closes any open popup menu.
+                self.menu_open = None;
 
                 let Some(dir) = self.current_dir.clone() else {
                     return;
@@ -245,14 +334,39 @@ impl Tab {
                 );
 
                 if double {
+                    // Double click: open folders.
                     self.last_click = None;
                     if is_dir {
                         self.navigate(path);
                     }
                 } else {
+                    // Single click: just select. Right-click opens the menu.
                     self.last_click = Some((index, Instant::now()));
                     self.list_selected = Some(index);
                     self.status = None;
+                }
+            }
+            Message::OpenMenu(index) => {
+                if index < self.entries.len() {
+                    self.crumb_menu = None;
+                    self.last_click = None;
+                    self.list_selected = Some(index);
+                    self.menu_pos = self.cursor;
+                    self.menu_open = Some(index);
+                    self.status = None;
+                }
+            }
+            Message::MenuAction(index, action) => {
+                self.menu_open = None;
+                self.run_menu_action(index, action);
+            }
+            Message::CloseMenu => {
+                self.menu_open = None;
+            }
+            Message::CursorMoved(point) => {
+                // Frozen while the menu is open so the menu doesn't move.
+                if self.menu_open.is_none() {
+                    self.cursor = point;
                 }
             }
             Message::GoUp => {
@@ -269,9 +383,12 @@ impl Tab {
             Message::NavigateTo(path) => self.navigate(path),
             Message::SetViewMode(mode) => {
                 self.crumb_menu = None;
+                self.menu_open = None;
                 self.view_mode = mode;
             }
             Message::ToggleChildren(index, path) => {
+                self.menu_open = None;
+
                 if self.crumb_menu.as_ref().is_some_and(|menu| menu.key == index) {
                     self.crumb_menu = None;
                     return;
@@ -297,6 +414,8 @@ impl Tab {
                 self.refresh();
             }
             Message::ToggleHidden => {
+                self.menu_open = None;
+
                 if self
                     .crumb_menu
                     .as_ref()
@@ -450,6 +569,28 @@ impl Tab {
         .into()
     }
 
+    /// Full-pane layer holding the right-click menu at `menu_pos`.
+    /// Clicking anywhere outside the menu closes it.
+    fn item_menu_layer(&self, index: usize) -> Element<'_, Message> {
+        let on_action: MenuCallback<'static, Message> = Rc::new(Message::MenuAction);
+        let pos = self.menu_pos;
+
+        mouse_area(
+            container(column![
+                Space::with_height(Length::Fixed(pos.y)),
+                row![
+                    Space::with_width(Length::Fixed(pos.x)),
+                    menu_content(index, &on_action),
+                ],
+            ])
+            .width(Length::Fill)
+            .height(Length::Fill),
+        )
+        .on_press(Message::CloseMenu)
+        .on_right_press(Message::CloseMenu)
+        .into()
+    }
+
     fn main_pane(&self) -> Element<'_, Message> {
         let parent_exists = self
             .current_dir
@@ -494,22 +635,36 @@ impl Tab {
                     text(format!("No items match “{}”", self.search.trim())).size(14),
                 );
             } else {
+                let menu = ItemMenu {
+                    open: None, // the popup is drawn by `item_menu_layer` instead
+                    on_open: Rc::new(Message::OpenMenu),
+                    on_action: Rc::new(Message::MenuAction),
+                    on_dismiss: Message::CloseMenu,
+                };
+
                 content = content.push(
                     FileList::new(&self.entries)
                         .selected(self.list_selected)
                         .on_click(Message::ListClicked)
-                        .view(self.view_mode),
+                        .view(self.view_mode, Some(menu)),
                 );
             }
         } else {
             content = content.push(text("Select a folder in the sidebar").size(14));
         }
 
-        container(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(16)
-            .into()
+        let base = mouse_area(
+            container(content)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .padding(16),
+        )
+        .on_move(Message::CursorMoved);
+
+        match self.menu_open.filter(|&i| i < self.entries.len()) {
+            Some(index) => stack![base, self.item_menu_layer(index)].into(),
+            None => base.into(),
+        }
     }
 
     pub fn view(&self) -> Element<'_, Message> {

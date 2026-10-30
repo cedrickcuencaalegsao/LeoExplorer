@@ -12,14 +12,15 @@ use iced::{
 use shared::{Entry, FileList, RowCallback};
 
 use crate::icons;
+use crate::item_menu::{ItemMenu, with_menu};
 use crate::sidebar::{scrollbar_style, thin_scrollbar};
 use crate::spitem::fit_label;
+use shared::ViewMode;
 use shared::{
     CARD_PADDING_X, CARD_PADDING_Y, CARD_SPACING, COLUMN_SPACING, DATE_PORTION, ICON_GAP,
     ICON_SIZE, LOCK_SIZE, META_SIZE, NAME_PORTION, NAME_SIZE, PATH_PORTION, SAFETY, SCROLL_GUTTER,
     TILE_HEIGHT, TILE_ICON, TILE_PADDING, TILE_WIDTH,
 };
-use shared::ViewMode;
 
 fn dim(theme: &Theme) -> text::Style {
     text::Style {
@@ -268,6 +269,7 @@ fn tile<'a, Message: Clone + 'a>(
 pub fn file_list<'a, Message: Clone + 'a>(
     list: FileList<'a, Message>,
     mode: ViewMode,
+    menu: Option<ItemMenu<'a, Message>>,
 ) -> Element<'a, Message> {
     let FileList {
         entries,
@@ -289,13 +291,15 @@ pub fn file_list<'a, Message: Clone + 'a>(
                 let mut rows = Column::new().spacing(CARD_SPACING);
 
                 for (index, entry) in entries.iter().enumerate() {
-                    rows = rows.push(card(
+                    let item = card(
                         entry,
                         index,
                         selected == Some(index),
                         card_width,
                         on_click.as_ref(),
-                    ));
+                    );
+
+                    rows = rows.push(with_menu(item, index, menu.as_ref(), Length::Fill));
                 }
 
                 rows.into()
@@ -311,12 +315,14 @@ pub fn file_list<'a, Message: Clone + 'a>(
 
                     for (offset, entry) in chunk.iter().enumerate() {
                         let index = chunk_index * per_row + offset;
-                        line = line.push(tile(
+                        let item = tile(
                             entry,
                             index,
                             selected == Some(index),
                             on_click.as_ref(),
-                        ));
+                        );
+
+                        line = line.push(with_menu(item, index, menu.as_ref(), Length::Shrink));
                     }
 
                     grid = grid.push(line);
@@ -340,11 +346,11 @@ pub fn file_list<'a, Message: Clone + 'a>(
 }
 
 pub trait FileListView<'a, Message> {
-    fn view(self, mode: ViewMode) -> Element<'a, Message>;
+    fn view(self, mode: ViewMode, menu: Option<ItemMenu<'a, Message>>) -> Element<'a, Message>;
 }
 
 impl<'a, Message: Clone + 'a> FileListView<'a, Message> for FileList<'a, Message> {
-    fn view(self, mode: ViewMode) -> Element<'a, Message> {
-        file_list(self, mode)
+    fn view(self, mode: ViewMode, menu: Option<ItemMenu<'a, Message>>) -> Element<'a, Message> {
+        file_list(self, mode, menu)
     }
 }

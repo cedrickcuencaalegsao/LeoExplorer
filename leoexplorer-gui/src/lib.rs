@@ -8,6 +8,7 @@ pub mod spmenu;
 pub mod tab;
 pub mod tabbar;
 pub mod titlebar;
+pub mod item_menu;
 
 use std::sync::Arc;
 
