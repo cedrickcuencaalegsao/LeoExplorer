@@ -27,6 +27,8 @@ pub enum Message {
     ToggleHidden,
     /// Header eye button: show or hide hidden files and folders.
     ToggleShowHidden,
+    /// Search box text changed: filter the current folder by name.
+    Search(String),
 }
 
 /// Dropdown shown under the breadcrumb bar.
@@ -39,7 +41,11 @@ pub struct Tab {
     pub sidebar: Sidebar,
     title: String,
     current_dir: Option<PathBuf>,
+    /// Everything in the folder (after the hidden-files filter).
+    all_entries: Vec<Entry>,
+    /// What is actually shown: `all_entries` filtered by `search`.
     entries: Vec<Entry>,
+    search: String,
     list_selected: Option<usize>,
     last_click: Option<(usize, Instant)>,
     status: Option<String>,
@@ -105,7 +111,9 @@ impl Tab {
             sidebar,
             title: "New Tab".to_string(),
             current_dir: None,
+            all_entries: Vec::new(),
             entries: Vec::new(),
+            search: String::new(),
             list_selected: None,
             last_click: None,
             status: None,
@@ -125,20 +133,45 @@ impl Tab {
         self.title.clone()
     }
 
+    /// Current text of this tab's search box.
+    pub fn search(&self) -> &str {
+        &self.search
+    }
+
+    /// Rebuild `entries` from `all_entries` using the current search text.
+    fn apply_search(&mut self) {
+        let query = self.search.trim().to_lowercase();
+
+        self.entries = if query.is_empty() {
+            self.all_entries.clone()
+        } else {
+            self.all_entries
+                .iter()
+                .filter(|entry| entry.name.to_lowercase().contains(&query))
+                .cloned()
+                .collect()
+        };
+
+        self.list_selected = None;
+        self.last_click = None;
+    }
+
     fn navigate(&mut self, path: PathBuf) {
         self.status = None;
         self.last_click = None;
         self.list_selected = None;
         self.crumb_menu = None;
+        self.search.clear();
 
         let show = self.show_hidden;
         match sidebar::read_children(&path).map(|entries| filter_hidden(entries, show)) {
-            Ok(entries) => self.entries = entries,
+            Ok(entries) => self.all_entries = entries,
             Err(err) => {
-                self.entries.clear();
+                self.all_entries.clear();
                 self.status = Some(err.to_string());
             }
         }
+        self.apply_search();
 
         self.title = self
             .sidebar
@@ -165,14 +198,15 @@ impl Tab {
 
         let show = self.show_hidden;
         match sidebar::read_children(&dir).map(|entries| filter_hidden(entries, show)) {
-            Ok(entries) => self.entries = entries,
+            Ok(entries) => self.all_entries = entries,
             Err(err) => {
                 log::warn!("cannot read {}: {err}", dir.display());
-                self.entries.clear();
+                self.all_entries.clear();
             }
         }
 
-        self.list_selected = None;
+        // Keeps the current search text applied to the fresh listing.
+        self.apply_search();
     }
 
     pub fn update(&mut self, message: Message) {
@@ -291,6 +325,11 @@ impl Tab {
                     key: HIDDEN_KEY,
                     items,
                 });
+            }
+            Message::Search(text) => {
+                self.crumb_menu = None;
+                self.search = text;
+                self.apply_search();
             }
         }
     }
@@ -450,12 +489,18 @@ impl Tab {
         }
 
         if self.current_dir.is_some() {
-            content = content.push(
-                FileList::new(&self.entries)
-                    .selected(self.list_selected)
-                    .on_click(Message::ListClicked)
-                    .view(self.view_mode),
-            );
+            if self.entries.is_empty() && !self.search.trim().is_empty() {
+                content = content.push(
+                    text(format!("No items match “{}”", self.search.trim())).size(14),
+                );
+            } else {
+                content = content.push(
+                    FileList::new(&self.entries)
+                        .selected(self.list_selected)
+                        .on_click(Message::ListClicked)
+                        .view(self.view_mode),
+                );
+            }
         } else {
             content = content.push(text("Select a folder in the sidebar").size(14));
         }

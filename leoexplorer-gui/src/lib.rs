@@ -7,6 +7,7 @@ pub mod spitem;
 pub mod spmenu;
 pub mod tab;
 pub mod tabbar;
+pub mod titlebar;
 
 use std::sync::Arc;
 
@@ -45,6 +46,9 @@ enum Message {
     SelectTab(usize),
     CloseTab(usize),
     NewTab,
+    SearchChanged(String),
+    SearchSubmitted,
+    DragWindow,
 }
 
 impl Workspace {
@@ -104,7 +108,16 @@ impl Workspace {
                 }
                 Task::none()
             }
-            Message::Boot(_) | Message::BootFinished => Task::none(),
+            Message::SearchChanged(text) => {
+                // Live filter: forward to the active tab.
+                if let Some(tab) = self.tabs.get_mut(self.active) {
+                    tab.update(tab::Message::Search(text));
+                }
+                Task::none()
+            }
+            Message::SearchSubmitted => Task::none(),
+            // The window drag message is handled in the top-level `update`.
+            Message::Boot(_) | Message::BootFinished | Message::DragWindow => Task::none(),
         }
     }
 
@@ -166,6 +179,7 @@ fn update(app: &mut App, msg: Message) -> Task<Message> {
             }
             Task::none()
         }
+        Message::DragWindow => window::get_oldest().and_then(window::drag),
         other => match &mut app.screen {
             Screen::Main(workspace) => workspace.update(other),
             Screen::Setup(_) => Task::none(),
@@ -174,10 +188,22 @@ fn update(app: &mut App, msg: Message) -> Task<Message> {
 }
 
 fn view(app: &App) -> Element<'_, Message> {
-    match &app.screen {
-        Screen::Setup(lines) => setup_view(lines),
-        Screen::Main(workspace) => workspace.view(),
-    }
+    let (search, content) = match &app.screen {
+        Screen::Setup(lines) => (String::new(), setup_view(lines)),
+        Screen::Main(workspace) => (
+            workspace.tabs[workspace.active].search().to_string(),
+            workspace.view(),
+        ),
+    };
+
+    let title_bar = titlebar::view(
+        &search,
+        Message::SearchChanged,
+        Message::SearchSubmitted,
+        Message::DragWindow,
+    );
+
+    column![title_bar, content].into()
 }
 
 fn theme(app: &App) -> Theme {
@@ -187,16 +213,40 @@ fn theme(app: &App) -> Theme {
     }
 }
 
+fn window_settings() -> window::Settings {
+    let base = window::Settings {
+        size: Size::new(1100.0, 800.0),
+        min_size: Some(Size::new(600.0, 400.0)),
+        ..Default::default()
+    };
+
+    // macOS: keep the native traffic lights, but let our bar draw
+    // underneath the title bar area (titlebar.rs leaves room for them).
+    #[cfg(target_os = "macos")]
+    {
+        window::Settings {
+            platform_specific: window::settings::PlatformSpecific {
+                title_hidden: true,
+                titlebar_transparent: true,
+                fullsize_content_view: true,
+            },
+            ..base
+        }
+    }
+
+    // Windows / Linux: the normal OS title bar stays; our bar sits below it.
+    #[cfg(not(target_os = "macos"))]
+    {
+        base
+    }
+}
+
 pub fn run(boot: Option<UnboundedReceiver<BootEvent>>) -> iced::Result {
     config::init();
 
-    iced::application("LeoExplorer", update, view)
+    iced::application("Leo Explorer", update, view)
         .theme(theme)
-        .window(window::Settings {
-            size: Size::new(1100.0, 800.0),
-            min_size: Some(Size::new(600.0, 400.0)),
-            ..Default::default()
-        })
+        .window(window_settings())
         .run_with(move || match boot {
             Some(receiver) => (
                 App {
