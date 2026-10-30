@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use iced::widget::{Column, button, column, container, horizontal_space, row, scrollable, text};
 use iced::{Alignment, Element, Length, Theme};
-use shared::AllDirectories;
+use shared::{AllDirectories, Entry};
 
 use crate::drive::Drive;
 use crate::icons::{self, Icon};
@@ -31,33 +31,7 @@ pub enum Message {
     Eject(usize),
 }
 
-pub struct Entry {
-    pub name: String,
-    pub is_dir: bool,
-    pub hidden: bool,
-    pub permission_required: bool,
-}
 
-impl Entry {
-    pub fn new(name: impl Into<String>, is_dir: bool) -> Self {
-        Self {
-            name: name.into(),
-            is_dir,
-            hidden: false,
-            permission_required: false,
-        }
-    }
-
-    pub fn hidden(mut self) -> Self {
-        self.hidden = true;
-        self
-    }
-
-    pub fn locked(mut self) -> Self {
-        self.permission_required = true;
-        self
-    }
-}
 
 pub struct Section {
     pub icon: fn(f32) -> Icon,
@@ -110,14 +84,18 @@ pub struct Sidebar {
     pub selected: Option<usize>,
 }
 
-fn read_children(path: &Path) -> io::Result<Vec<Entry>> {
+pub(crate) fn read_children(path: &Path) -> io::Result<Vec<Entry>> {
     let mut entries = Vec::new();
 
     for item in fs::read_dir(path)?.flatten() {
         let name = item.file_name().to_string_lossy().into_owned();
         let is_dir = item.file_type().map(|t| t.is_dir()).unwrap_or(false);
+        let modified = item.metadata().ok().and_then(|meta| meta.modified().ok());
 
-        let mut entry = Entry::new(name.clone(), is_dir);
+        let mut entry = Entry::new(name.clone(), is_dir)
+            .path(item.path())
+            .modified(modified);
+
         if name.starts_with('.') {
             entry = entry.hidden();
         }
@@ -131,6 +109,25 @@ fn read_children(path: &Path) -> io::Result<Vec<Entry>> {
     });
 
     Ok(entries)
+}
+
+pub(crate) fn scrollbar_style(theme: &Theme, status: scrollable::Status) -> scrollable::Style {
+    let mut style = scrollable::default(theme, status);
+
+    style.vertical_rail.background = None;
+    style.vertical_rail.border.radius = 2.0.into();
+    style.vertical_rail.scroller.border.radius = 2.0.into();
+
+    style
+}
+
+pub(crate) fn thin_scrollbar() -> scrollable::Direction {
+    scrollable::Direction::Vertical(
+        scrollable::Scrollbar::new()
+            .width(4.0)
+            .scroller_width(4.0)
+            .margin(2.0),
+    )
 }
 
 impl Sidebar {
@@ -175,6 +172,31 @@ impl Sidebar {
         }
     }
 
+    pub fn section_path(&self, i: usize) -> Option<PathBuf> {
+        self.sections.get(i)?.path.clone()
+    }
+
+    pub fn entry_path(&self, i: usize, j: usize) -> Option<(PathBuf, bool)> {
+        let section = self.sections.get(i)?;
+        let entry = section.children.get(j)?;
+        Some((section.path.as_ref()?.join(&entry.name), entry.is_dir))
+    }
+
+    pub fn reload(&mut self) {
+        for section in &mut self.sections {
+            if !section.expanded {
+                continue;
+            }
+
+            if let Some(path) = &section.path {
+                match read_children(path) {
+                    Ok(children) => section.children = children,
+                    Err(err) => log::warn!("cannot read {}: {err}", path.display()),
+                }
+            }
+        }
+    }
+
     pub fn update(&mut self, message: Message) {
         match message {
             Message::ToggleSection(i) => {
@@ -184,7 +206,7 @@ impl Sidebar {
 
                 section.expanded = !section.expanded;
 
-                if section.expanded && section.children.is_empty() {
+                if section.expanded {
                     if let Some(path) = &section.path {
                         match read_children(path) {
                             Ok(children) => section.children = children,
@@ -264,12 +286,7 @@ impl Sidebar {
                 header,
                 scrollable(nav)
                     .height(Length::Fill)
-                    .direction(scrollable::Direction::Vertical(
-                        scrollable::Scrollbar::new()
-                            .width(4.0)
-                            .scroller_width(4.0)
-                            .margin(2.0),
-                    ))
+                    .direction(thin_scrollbar())
                     .style(scrollbar_style),
                 drives
             ]
@@ -280,14 +297,4 @@ impl Sidebar {
         .padding(16)
         .into()
     }
-}
-
-fn scrollbar_style(theme: &Theme, status: scrollable::Status) -> scrollable::Style {
-    let mut style = scrollable::default(theme, status);
-
-    style.vertical_rail.background = None;
-    style.vertical_rail.border.radius = 2.0.into();
-    style.vertical_rail.scroller.border.radius = 2.0.into();
-
-    style
 }

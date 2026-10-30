@@ -2121,6 +2121,7 @@ name = "leoexplorer-gui"
 version = "0.1.0"
 dependencies = [
  "bootstrap",
+ "chrono",
  "dirs 5.0.1",
  "iced",
  "leoexplorer_setup",

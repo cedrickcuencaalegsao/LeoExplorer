@@ -16,3 +16,19 @@ pub const CACHE_TEMP_FILE_NAME: &str = "leocache.bin.zst.tmp";
 pub static CACHE_STATUS: AtomicU8 = AtomicU8::new(0);
 pub static CACHE_MESSAGE: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
 pub static GLOBAL_CACHE: Lazy<Mutex<Option<CacheData>>> = Lazy::new(|| Mutex::new(None));
+
+pub const SCROLL_GUTTER: f32 = 12.0;
+pub const CARD_PADDING_X: f32 = 14.0;
+pub const CARD_PADDING_Y: f32 = 10.0;
+pub const COLUMN_SPACING: f32 = 16.0;
+pub const CARD_SPACING: f32 = 8.0;
+pub const ICON_SIZE: f32 = 20.0;
+pub const ICON_GAP: f32 = 10.0;
+pub const LOCK_SIZE: f32 = 14.0;
+pub const NAME_SIZE: f32 = 14.0;
+pub const META_SIZE: f32 = 13.0;
+pub const SAFETY: f32 = 6.0;
+
+pub const NAME_PORTION: u16 = 4;
+pub const DATE_PORTION: u16 = 3;
+pub const PATH_PORTION: u16 = 5;
