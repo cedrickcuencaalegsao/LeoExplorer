@@ -1,11 +1,11 @@
 use std::path::{Component, Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use crate::filelist::{FileListView, ViewMode};
+use crate::filelist::FileListView;
 use iced::widget::text::Wrapping;
 use iced::widget::{Column, Row, button, column, container, row, scrollable, text, tooltip};
 use iced::{Alignment, Element, Length};
-use shared::{AllDirectories, Entry, FileList};
+use shared::{AllDirectories, Entry, FileList, ViewMode};
 
 use crate::icons;
 use crate::sidebar::{self, Sidebar};

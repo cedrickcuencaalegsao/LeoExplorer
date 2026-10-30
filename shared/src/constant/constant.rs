@@ -32,3 +32,9 @@ pub const SAFETY: f32 = 6.0;
 pub const NAME_PORTION: u16 = 4;
 pub const DATE_PORTION: u16 = 3;
 pub const PATH_PORTION: u16 = 5;
+
+pub const TILE_WIDTH: f32 = 128.0;
+pub const TILE_HEIGHT: f32 = 120.0;
+pub const TILE_PADDING: f32 = 10.0;
+pub const TILE_ICON: f32 = 48.0;
+

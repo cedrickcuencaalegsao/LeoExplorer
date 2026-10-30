@@ -14,34 +14,12 @@ use shared::{Entry, FileList, RowCallback};
 use crate::icons;
 use crate::sidebar::{scrollbar_style, thin_scrollbar};
 use crate::spitem::fit_label;
-
-const SCROLL_GUTTER: f32 = 12.0;
-const CARD_PADDING_X: f32 = 14.0;
-const CARD_PADDING_Y: f32 = 10.0;
-const COLUMN_SPACING: f32 = 16.0;
-const CARD_SPACING: f32 = 8.0;
-const ICON_SIZE: f32 = 20.0;
-const ICON_GAP: f32 = 10.0;
-const LOCK_SIZE: f32 = 14.0;
-const NAME_SIZE: f32 = 14.0;
-const META_SIZE: f32 = 13.0;
-const SAFETY: f32 = 6.0;
-
-const NAME_PORTION: u16 = 4;
-const DATE_PORTION: u16 = 3;
-const PATH_PORTION: u16 = 5;
-
-const TILE_WIDTH: f32 = 128.0;
-const TILE_HEIGHT: f32 = 120.0;
-const TILE_PADDING: f32 = 10.0;
-const TILE_ICON: f32 = 48.0;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum ViewMode {
-    #[default]
-    List,
-    BigTiles,
-}
+use shared::{
+    CARD_PADDING_X, CARD_PADDING_Y, CARD_SPACING, COLUMN_SPACING, DATE_PORTION, ICON_GAP,
+    ICON_SIZE, LOCK_SIZE, META_SIZE, NAME_PORTION, NAME_SIZE, PATH_PORTION, SAFETY, SCROLL_GUTTER,
+    TILE_HEIGHT, TILE_ICON, TILE_PADDING, TILE_WIDTH,
+};
+use shared::ViewMode;
 
 fn dim(theme: &Theme) -> text::Style {
     text::Style {
