@@ -2132,8 +2132,8 @@ dependencies = [
 name = "leoexplorer_setup"
 version = "0.1.0"
 dependencies = [
- "bootstrap",
  "iced",
+ "shared",
 ]
 
 [[package]]

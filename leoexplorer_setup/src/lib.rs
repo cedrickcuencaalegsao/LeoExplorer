@@ -4,7 +4,7 @@
 use std::f32::consts::TAU;
 use std::time::Instant;
 
-use bootstrap::{BootEvent, Step};
+use shared::{BootEvent, Step};
 use iced::font::Weight;
 use iced::widget::image::Handle;
 use iced::widget::text::Wrapping;

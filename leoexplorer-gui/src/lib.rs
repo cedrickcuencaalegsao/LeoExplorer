@@ -9,7 +9,8 @@ pub mod tabbar;
 
 use std::sync::Arc;
 
-use bootstrap::{BootEvent, BootReceiver};
+use bootstrap::BootReceiver;
+use shared::BootEvent;
 use iced::widget::{column, container, row, text};
 use iced::{Element, Length, Size, Subscription, Task, Theme, window};
 use leoexplorer_setup::{self as setup, SetupState};

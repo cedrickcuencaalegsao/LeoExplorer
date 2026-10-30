@@ -6,29 +6,12 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use futures::channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
-use shared::{CacheEvent, Reporter};
+use shared::BootEvent;
+use shared::CacheEvent;
+use shared::Reporter;
+use shared::Step;
 
 pub type BootReceiver = UnboundedReceiver<BootEvent>;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Step {
-    Settings,
-    Cache,
-}
-
-#[derive(Debug, Clone)]
-pub enum BootEvent {
-    /// A new step has started.
-    Step(Step),
-    /// Latest progress text for the current step.
-    Detail(String),
-    /// Cache build progress, 0.0..=1.0.
-    Progress(f32),
-    /// Setup failed; the message is shown to the user.
-    Failed(String),
-    /// Everything is ready, the main window can open.
-    Ready,
-}
 
 /// True when the cache file is missing (first run, or it was deleted).
 pub fn needs_setup() -> bool {
